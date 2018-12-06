@@ -4,11 +4,16 @@ import osproc
 import parsecfg
 import asynctools
 import asyncdispatch
+import strformat
 import posix
 import times
 import strutils
+import db_sqlite
+import options
+import tables
 
 import streams
+import sugar
 
 let time_format = times.initTimeFormat("yyyy-MM-dd")
 let divider = "----------------------------------------------------------"
@@ -18,11 +23,13 @@ const app_config_dir = "worklog"
 const config_name = "config.ini"
 
 var config: Config = nil
+var theDb: DbConn
 
 type
   Entry* = ref object
     date: DateTime
     content: string
+    id: Option[int]
 
   Journal =
     seq[Entry]
@@ -34,77 +41,63 @@ proc initialize_config(): void =
     os.createDir(config_path)
 
   if not existsFile(config_file_path):
-    echo "config does not exist"
     var dict = newConfig()
-    dict.setSectionKey("", "journal_dir", os.joinPath(home_dir, "journal.txt"))
+    dict.setSectionKey("", "journal_dir", os.joinPath(home_dir, "journal.db"))
     dict.writeConfig(config_file_path)
     config = dict
-    echo "created config"
     return
 
-  echo "loading config"
   config = parsecfg.loadConfig(config_file_path)
 
 proc writeHelp(): void =
-  echo "foo"
+  echo """help string
+   
+  """
   quit()
 
 
 proc writeVersion(): void =
-  echo  "v1.0"
+  echo  "Worklog v1.0"
   quit()
 
 
-proc saveJournal(journal: File, entry: Entry): void =
-  var string_entry = ""
-  string_entry.add(entry.date.format(time_format) & "\n\n")
-  string_entry.add(entry.content)
-  string_entry.add(divider)
-  write(journal, string_entry)
+proc saveJournal(db: DbConn, entry: Entry): void =
+  discard db.insertId(
+    sql("INSERT INTO entries (date, content) VALUES (?, ?)"),
+    entry.date.toTime.toUnix, entry.content
+  )
+
+proc updateJournal(db: DbConn, entry: Entry): void =
+  discard db.insertId(
+    sql("UPDATE entries SET content = ? WHERE id = ?"),
+    entry.content,
+    entry.id.get
+  )
+
+proc get_todays_entry(db: DbConn): Option[Entry] =
+  var now = now()
+  var row = db.getRow(
+    sql("""SELECT * FROM entries WHERE date > ?"""),
+    now.toTime.toUnix,
+  )
+  if row[0] != "":
+    echo "row 2 is " & row[2]
+    var x = row[1].parseInt.fromUnix.local
+    return some(Entry(date: x, content: row[4], id: some(row[0].parseInt)))
+  else:
+    return none(Entry)
 
 
-proc loadJournal(): File = 
+proc loadJournal() = 
   let location = config.getSectionValue("", "journal_dir")
-  echo "file location is " & location
-  if not fileExists(location):
-    echo "creating journal file"
-    writeFile location, ""
-  # load file
-  let file = open(location, FileMode.fmReadWrite, bufSize=1024)
-  echo "file size is " & $getFileSize(file)
-  echo "reading file"
-  for line in lines file:
-    echo "one line"
-    echo file.readLine()
-  return file
-
-
-proc parse_journal(journal: File): Journal =
-  var
-    date: string = ""
-    content: string = ""
-    res: Journal = @[]
-
-  for line in lines journal:
-    echo line
-    if line.strip() == divider:
-      # add the entry to the result
-      try: 
-        echo "adding entry"
-        res.add Entry(
-          date: date.parse(time_format),
-          content: content
-        )
-        date = ""
-        content = ""
-      except:
-        echo "crap"
-    if date == "":
-      date = line.string
-    else:
-      content.add line.string
-
-  return res
+  if existsFile(location):
+    theDb = db_sqlite.open(location, "", "", "") 
+  else:
+    theDb = db_sqlite.open(location, "", "", "") 
+    theDb.exec(sql("""create table entries (
+        Id      INTEGER PRIMARY KEY,
+        date    INT,
+        content TEXT )"""))
 
 
 proc get_input(content = "", editor = "vim"): string =
@@ -115,42 +108,121 @@ proc get_input(content = "", editor = "vim"): string =
   let err = execCmd(editor & " " & tmpFile)
   return tmpFile.readFile
 
-proc is_same_day(time1, time2: DateTime): bool =
-  time1.format(time_format) == time2.format(time_format)
+proc list_entries() =
+  for row in theDb.rows(
+    sql("SELECT * from entries")
+  ):
+    echo row[1].parseInt.fromUnix.local.format(time_format)
+    echo "\n"
+    echo row[2]
+    echo divider
+
+proc list_entries(days: int) = 
+  var now = now()
+  now = now - days(days)
+  # TODO crap I think I should just store the date
+  for row in theDb.rows(
+    sql("""SELECT * FROM entries WHERE date > ?"""),
+    now.toTime.toUnix
+  ):
+    echo row[1].parseInt.fromUnix.local.format(time_format)
+    echo "\n"
+    echo row[2]
+    echo divider
+
+proc edit_entry(date: string) =
+  echo "edit entry"
+  var day_start: DateTime
+  var day_end: DateTime
+  try:
+    var parsed_date = date.parse(time_format)
+    var day_end = initDateTime(
+      parsed_date.monthday,
+      parsed_date.month,
+      parsed_date.year,
+      23, 59, 59
+    )
+
+    var row = theDb.getRow(
+      sql("""SELECT * FROM entries WHERE date > ? AND date < ?"""),
+      parsed_date.toTime.toUnix, day_end.toTime.toUnix
+    )
+    if row[0] != "":
+      var input = get_input(content=row[2])
+      theDb.updateJournal(Entry(
+        id: some(row[0].parseInt),
+        date: row[1].parseInt.fromUnix.local,
+        content: input
+      ))
+    else:
+      let message = &"no entry for {parsed_date.format(time_format)}. Modify this file to create one"
+      var input = get_input(content=message)
+      if input == message:
+        return
+      else:
+        theDb.saveJournal(Entry(
+          date: parsed_date + 12.hours,
+          content: input
+        ))
+  except:
+    echo "could not parse time format"
+    raise
+
+
+proc export_journal() =
+  echo "not created"
+
+type
+  Command = proc(): void
 
 # begin program
 initialize_config()
 let command_args = commandLineParams()
 if command_args.len > 0:
+  var command: string
+  var args: TableRef[string, string] = newTable[string, string]()
   for kind, key, val in getopt(command_args):
     case kind
     of cmdArgument:
-      echo "key", key, "value", val
-      # not sure what would go here.
+      command = key
     of cmdLongOption, cmdShortOption:
       case key
       of "help", "h": writeHelp()
       of "version", "v": writeVersion()
+      of "days":
+        args["days"] = val
+      of "date":
+        args["date"] = val
     of cmdEnd:
       assert(false) # cannot happen
-  # maybe run command here passing args
+
+  loadJournal()
+  echo "running command " & command
+  case command
+  of "list", "ls":
+    if args.hasKey "days":
+      list_entries(days=args["days"].parseInt)
+    else:
+      list_entries()
+  of "edit", "e": edit_entry(date=args["date"])
+  of "export", "exp": export_journal()
 else:
   echo "loading journal"
-  var journal = loadJournal()
+  loadJournal()
   echo "journal loaded"
-  var parsed_journal = parse_journal(journal)
-  var last_entry: Entry
-  let now_date = times.now()
-  if parsed_journal.len > 0:
-    echo "journal entry for today already created"
-    last_entry = parsed_journal[parsed_journal.high]
-  if last_entry != nil and is_same_day(now_date, last_entry.date):
+  var maybe_today_entry = theDb.get_todays_entry
+
+  if maybe_today_entry.isSome:
      # we have an entry for today already 
-    var input = get_input(content=last_entry.content)
+    var input = get_input(content=maybe_today_entry.get().content)
+    var entry = maybe_today_entry.get
+    entry.content = input
+    theDb.updateJournal(entry)
     echo input
     # broke and needs to be thought out again.
     # saveJournal(journal, )
   else:
     var input = get_input()
+    var now_date = now()
     var newEntry = Entry(date: now_date, content: input)
-    saveJournal(journal, newEntry)
+    theDb.saveJournal(newEntry)
