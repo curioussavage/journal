@@ -1,0 +1,6 @@
+Items are not sorted in any way
+
+* fix dates (store utc in db - or determine if this is really needed)
+* consider breaking code out into modules
+* cleanup unused deps (from earlier experiments)
+* look into a better command line arg parser (docopt commandeer)
