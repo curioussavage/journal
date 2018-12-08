@@ -14,6 +14,7 @@ import tables
 
 import streams
 import sugar
+import json
 
 let time_format = times.initTimeFormat("yyyy-MM-dd")
 let divider = "----------------------------------------------------------"
@@ -34,6 +35,9 @@ type
   Journal =
     seq[Entry]
 
+proc to_json(entry: Entry): JsonNode =
+  return %*{ "date": $entry.date, "content": entry.content }
+
 proc initialize_config(): void =
   let config_path = os.joinPath(config_dir, app_config_dir)
   let config_file_path = os.joinPath(config_path, config_name)
@@ -49,9 +53,30 @@ proc initialize_config(): void =
 
   config = parsecfg.loadConfig(config_file_path)
 
+
 proc writeHelp(): void =
-  echo """help string
-   
+  echo """    Worklog v1.0
+
+    Description:
+      Worklog is a command line journal program. It keeps your journal entries
+      in a sqlite database file. An external editor is used to edit the entries.
+
+    Commands:
+      --help, -h    display this help
+
+      --version, -v display the version
+
+      edit, e       edit an existing entry or create an entry for a past date
+        
+                    args:
+                      --date   a date in the format yyyy-MM-dd
+
+      list, ls      used to list journal entries
+
+                    args:
+                      --days   an integer specifying the number of days to list
+
+      export, exp   export journal to JSON
   """
   quit()
 
@@ -75,17 +100,16 @@ proc updateJournal(db: DbConn, entry: Entry): void =
   )
 
 proc get_todays_entry(db: DbConn): Option[Entry] =
-  var now = now()
+  var n = now()
+  var now_date = initDateTime(n.monthday, n.month, n.year, 0, 0, 0)
   var row = db.getRow(
     sql("""SELECT * FROM entries WHERE date > ?"""),
-    now.toTime.toUnix,
+    now_date.toTime.toUnix,
   )
   if row[0] != "":
     echo "row 2 is " & row[2]
     var x = row[1].parseInt.fromUnix.local
-    return some(Entry(date: x, content: row[4], id: some(row[0].parseInt)))
-  else:
-    return none(Entry)
+    return some(Entry(date: x, content: row[2], id: some(row[0].parseInt)))
 
 
 proc loadJournal() = 
@@ -170,14 +194,15 @@ proc edit_entry(date: string) =
 
 
 proc export_journal() =
-  echo "not created"
-
-type
-  Command = proc(): void
+  var res = newJArray()
+  for row in theDb.fastRows(sql("Select * from entries")):
+    res.add(Entry(date: row[1].parseInt.fromUnix.local, content: row[2]).to_json)
+  echo res
 
 # begin program
 initialize_config()
 let command_args = commandLineParams()
+loadJournal()
 if command_args.len > 0:
   var command: string
   var args: TableRef[string, string] = newTable[string, string]()
@@ -196,8 +221,6 @@ if command_args.len > 0:
     of cmdEnd:
       assert(false) # cannot happen
 
-  loadJournal()
-  echo "running command " & command
   case command
   of "list", "ls":
     if args.hasKey "days":
@@ -207,20 +230,13 @@ if command_args.len > 0:
   of "edit", "e": edit_entry(date=args["date"])
   of "export", "exp": export_journal()
 else:
-  echo "loading journal"
-  loadJournal()
-  echo "journal loaded"
   var maybe_today_entry = theDb.get_todays_entry
-
   if maybe_today_entry.isSome:
      # we have an entry for today already 
     var input = get_input(content=maybe_today_entry.get().content)
     var entry = maybe_today_entry.get
     entry.content = input
     theDb.updateJournal(entry)
-    echo input
-    # broke and needs to be thought out again.
-    # saveJournal(journal, )
   else:
     var input = get_input()
     var now_date = now()
