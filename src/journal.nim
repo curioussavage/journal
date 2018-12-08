@@ -144,7 +144,6 @@ proc list_entries() =
 proc list_entries(days: int) = 
   var now = now()
   now = now - days(days)
-  # TODO crap I think I should just store the date
   for row in theDb.rows(
     sql("""SELECT * FROM entries WHERE date > ?"""),
     now.toTime.toUnix
