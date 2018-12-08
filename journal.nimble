@@ -1,11 +1,12 @@
 # Package
 
 version       = "0.1.0"
-author        = "Adam Winn"
-description   = "A terminal work log app"
+author        = "Curioussavage"
+description   = "A terminal journal app"
 license       = "MIT"
 srcDir        = "src"
-bin           = @["worklog"]
+bin           = @["journal"]
+binDir        = "bin"
 
 
 # Dependencies
