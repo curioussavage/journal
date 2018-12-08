@@ -20,7 +20,7 @@ let time_format = times.initTimeFormat("yyyy-MM-dd")
 let divider = "----------------------------------------------------------"
 let config_dir = os.getConfigDir()
 let home_dir = os.getHomeDir()
-const app_config_dir = "worklog"
+const app_config_dir = "com.github.curioussavage.journal"
 const config_name = "config.ini"
 
 var config: Config = nil
