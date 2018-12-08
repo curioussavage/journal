@@ -107,7 +107,6 @@ proc get_todays_entry(db: DbConn): Option[Entry] =
     now_date.toTime.toUnix,
   )
   if row[0] != "":
-    echo "row 2 is " & row[2]
     var x = row[1].parseInt.fromUnix.local
     return some(Entry(date: x, content: row[2], id: some(row[0].parseInt)))
 
@@ -154,8 +153,6 @@ proc list_entries(days: int) =
     echo divider
 
 proc edit_entry(date: string) =
-  echo "edit entry"
-  var day_start: DateTime
   var day_end: DateTime
   try:
     var parsed_date = date.parse(time_format)
