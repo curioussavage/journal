@@ -10,16 +10,16 @@ import db_sqlite
 import options
 import tables
 
-import streams
-import sugar
 import json
 
+const
+  divider = "----------------------------------------------------------"
+  app_config_dir = "com.github.curioussavage.journal"
+  config_name = "config.ini"
+
 let time_format = times.initTimeFormat("yyyy-MM-dd")
-let divider = "----------------------------------------------------------"
 let config_dir = os.getConfigDir()
 let home_dir = os.getHomeDir()
-const app_config_dir = "com.github.curioussavage.journal"
-const config_name = "config.ini"
 
 var config: Config = nil
 var theDb: DbConn
@@ -52,6 +52,18 @@ proc initialize_config(): void =
     return
 
   config = parsecfg.loadConfig(config_file_path)
+
+
+proc loadJournal() = 
+  let location = config.getSectionValue("", "journal_dir")
+  if existsFile(location):
+    theDb = db_sqlite.open(location, "", "", "") 
+  else:
+    theDb = db_sqlite.open(location, "", "", "") 
+    theDb.exec(sql("""create table entries (
+        Id      INTEGER PRIMARY KEY,
+        date    INT,
+        content TEXT )"""))
 
 
 proc writeHelp(): void =
@@ -95,12 +107,14 @@ proc saveJournal(db: DbConn, entry: Entry): void =
     entry.date.toTime.toUnix, entry.content
   )
 
+
 proc updateJournal(db: DbConn, entry: Entry): void =
   discard db.insertId(
     sql("UPDATE entries SET content = ? WHERE id = ?"),
     entry.content,
     entry.id.get
   )
+
 
 proc get_todays_entry(db: DbConn): Option[Entry] =
   var n = now()
@@ -114,18 +128,6 @@ proc get_todays_entry(db: DbConn): Option[Entry] =
     return some(Entry(date: x, content: row[2], id: some(row[0].parseInt)))
 
 
-proc loadJournal() = 
-  let location = config.getSectionValue("", "journal_dir")
-  if existsFile(location):
-    theDb = db_sqlite.open(location, "", "", "") 
-  else:
-    theDb = db_sqlite.open(location, "", "", "") 
-    theDb.exec(sql("""create table entries (
-        Id      INTEGER PRIMARY KEY,
-        date    INT,
-        content TEXT )"""))
-
-
 proc get_input(content = "", editor = "vim"): string =
   let tmpPath = getTempDir() / "userEditString"
   let tmpFile = tmpPath / $getpid()
@@ -134,26 +136,28 @@ proc get_input(content = "", editor = "vim"): string =
   let err = execCmd(config.getSectionValue("", "editor") & " " & tmpFile)
   return tmpFile.readFile
 
+
+proc list_db_entry(row: Row) =
+  echo row[1].parseInt.fromUnix.local.format(time_format)
+  echo "\n"
+  echo row[2]
+  echo divider
+
+
 proc list_entries() =
-  for row in theDb.rows(
-    sql("SELECT * from entries")
-  ):
-    echo row[1].parseInt.fromUnix.local.format(time_format)
-    echo "\n"
-    echo row[2]
-    echo divider
+  for row in theDb.rows(sql"SELECT * from entries"):
+    list_db_entry(row)
+
 
 proc list_entries(days: int) = 
   var now = now()
   now = now - days(days)
   for row in theDb.rows(
-    sql("""SELECT * FROM entries WHERE date > ?"""),
+    sql"""SELECT * FROM entries WHERE date > ?""",
     now.toTime.toUnix
   ):
-    echo row[1].parseInt.fromUnix.local.format(time_format)
-    echo "\n"
-    echo row[2]
-    echo divider
+    list_db_entry(row)
+
 
 proc edit_entry(date: string) =
   var day_end: DateTime
@@ -198,10 +202,11 @@ proc export_journal() =
     res.add(Entry(date: row[1].parseInt.fromUnix.local, content: row[2]).to_json)
   echo res
 
+
 # begin program
 initialize_config()
-let command_args = commandLineParams()
 loadJournal()
+let command_args = commandLineParams()
 if command_args.len > 0:
   var command: string
   var args: TableRef[string, string] = newTable[string, string]()
