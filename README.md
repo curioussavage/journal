@@ -19,26 +19,30 @@ outside of the standard library so all you need is the compiler to build from so
  
 The following guide can be seen by running `journal -h`
 
-    Worklog v1.0
+```
+Worklog v1.0
 
-    Description:
-      Worklog is a command line journal program. It keeps your journal entries
-      in a sqlite database file. An external editor is used to edit the entries.
+Description:
+  Worklog is a command line journal program. It keeps your journal entries
+  in a sqlite database file. An external editor is used to edit the entries.
 
-    Commands:
-      --help, -h    display this help
+Usage:
+  Run the command without any arguments to create or edit todays entry.
 
-      --version, -v display the version
+Commands:
+  --help, -h    display this help
 
-      edit, e       edit an existing entry or create an entry for a past date
-        
-                    args:
-                      --date   a date in the format yyyy-MM-dd
+  --version, -v display the version
 
-      list, ls      used to list journal entries
+  edit, e       edit an existing entry or create an entry for a past date
+    
+                args:
+                  --date   a date in the format yyyy-MM-dd
 
-                    args:
-                      --days   an integer specifying the number of days to list
+  list, ls      used to list journal entries
 
-      export, exp   export journal to JSON
+                args:
+                  --days   an integer specifying the number of days to list
 
+  export, exp   export journal to JSON
+```
