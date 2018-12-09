@@ -4,4 +4,3 @@ Items are not sorted in any way
 * consider breaking code out into modules
 * cleanup unused deps (from earlier experiments)
 * look into a better command line arg parser (docopt commandeer)
-* make editor configurable and test with common command line editors
