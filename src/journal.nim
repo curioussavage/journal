@@ -44,7 +44,9 @@ proc initialize_config(): void =
 
   if not existsFile(config_file_path):
     var dict = newConfig()
+    # add default values
     dict.setSectionKey("", "journal_dir", os.joinPath(home_dir, "journal.db"))
+    dict.setSectionKey("", "editor", "nano")
     dict.writeConfig(config_file_path)
     config = dict
     return
@@ -129,7 +131,7 @@ proc get_input(content = "", editor = "vim"): string =
   let tmpFile = tmpPath / $getpid()
   createDir tmpPath
   writeFile tmpFile, content
-  let err = execCmd(editor & " " & tmpFile)
+  let err = execCmd(config.getSectionValue("", "editor") & " " & tmpFile)
   return tmpFile.readFile
 
 proc list_entries() =
