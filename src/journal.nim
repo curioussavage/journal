@@ -2,8 +2,6 @@ import parseopt
 import os
 import osproc
 import parsecfg
-import asynctools
-import asyncdispatch
 import strformat
 import posix
 import times

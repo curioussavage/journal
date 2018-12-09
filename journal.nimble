@@ -12,4 +12,3 @@ binDir        = "bin"
 # Dependencies
 
 requires "nim >= 0.19.0"
-requires "asynctools >= 0.1.0"
