@@ -67,10 +67,10 @@ proc loadJournal() =
 
 
 proc writeHelp(): void =
-  echo """Worklog v1.0
+  echo """Journal v1.0.0
 
 Description:
-  Worklog is a command line journal program. It keeps your journal entries
+  journal is a command line journal program. It keeps your journal entries
   in a sqlite database file. An external editor is used to edit the entries.
 
 Usage:
@@ -97,7 +97,7 @@ Commands:
 
 
 proc writeVersion(): void =
-  echo  "Worklog v1.0"
+  echo  "Journal v1.0.0"
   quit()
 
 

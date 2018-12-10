@@ -12,6 +12,10 @@ just wanted one entry per day that I could easily edit.
 
 ## Installation
 
+You can find the latest release [here](https://github.com/curioussavage/journal/releases).
+
+Only linux is supported right now since that is the OS I use and test on.
+
 journal is written in [Nim](https://nim-lang.org/). The program has no dependencies
 outside of the standard library so all you need is the compiler to build from source.
 
