@@ -128,12 +128,23 @@ proc get_todays_entry(db: DbConn): Option[Entry] =
     return some(Entry(date: x, content: row[2], id: some(row[0].parseInt)))
 
 
-proc get_input(content = "", editor = "vim"): string =
+proc get_input(content = ""): string =
   let tmpPath = getTempDir() / "userEditString"
   let tmpFile = tmpPath / $getpid()
-  createDir tmpPath
-  writeFile tmpFile, content
-  let err = execCmd(config.getSectionValue("", "editor") & " " & tmpFile)
+  try:
+    createDir tmpPath
+  except:
+    echo "could not create tempfile"
+
+  try:
+    writeFile tmpFile, content
+  except:
+    echo "couild not write to tempfile"
+
+  try:
+    let err = execCmd(config.getSectionValue("", "editor") & " " & tmpFile)
+  except:
+    echo "editor could not open/edit file"
   return tmpFile.readFile
 
 
