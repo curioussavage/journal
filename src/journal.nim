@@ -77,7 +77,7 @@ proc loadJournal() =
 
 
 proc writeHelp(): void =
-  echo """Journal v1.0.0
+  echo """Journal v1.1.0
 
 Description:
   journal is a command line journal program. It keeps your journal entries
@@ -102,6 +102,8 @@ Commands:
                   --days   an integer specifying the number of days to list
 
   export, exp   export journal to JSON
+
+  template t    edit the template used for new entries
   """
   quit()
 
@@ -157,6 +159,19 @@ proc get_input(content = ""): string =
     echo "editor could not open/edit file"
   return tmpFile.readFile
 
+
+proc edit_template() =
+  let path = config_dir / app_config_dir / "template" 
+  var templ = ""
+  if os.existsFile(path):
+    templ = readFile(path)
+  
+  templ = get_input(content=templ)
+  try:
+    writeFile(path, templ)
+  except:
+    echo "Could not save template"
+  
 
 proc list_db_entry(row: Row) =
   echo row[1].parseInt.fromUnix.local.format(time_format)
@@ -239,6 +254,7 @@ if command_args.len > 0:
       case key
       of "help", "h": writeHelp()
       of "version", "v": writeVersion()
+      of "template", "t": edit_template()
       of "days":
         args["days"] = val
       of "date":
@@ -254,6 +270,7 @@ if command_args.len > 0:
       list_entries()
   of "edit", "e": edit_entry(date=args["date"])
   of "export", "exp": export_journal()
+  of "template", "t": edit_template()
 else:
   var maybe_today_entry = theDb.get_todays_entry
   if maybe_today_entry.isSome:

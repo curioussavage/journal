@@ -24,7 +24,7 @@ outside of the standard library so all you need is the compiler to build from so
 The following guide can be seen by running `journal -h`
 
 ```
-Worklog v1.0
+Worklog v1.1.0
 
 Description:
   Worklog is a command line journal program. It keeps your journal entries
@@ -49,4 +49,7 @@ Commands:
                   --days   an integer specifying the number of days to list
 
   export, exp   export journal to JSON
+
+  template t    edit the template used for new entries
+
 ```
