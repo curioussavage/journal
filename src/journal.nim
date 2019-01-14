@@ -280,7 +280,9 @@ else:
     entry.content = input
     theDb.updateJournal(entry)
   else:
-    var input = get_input(content=get_template())
-    var now_date = now()
-    var newEntry = Entry(date: now_date, content: input)
-    theDb.saveJournal(newEntry)
+    var templ = get_template()
+    var input = get_input(content=templ)
+    if input != templ:
+      var now_date = now()
+      var newEntry = Entry(date: now_date, content: input)
+      theDb.saveJournal(newEntry)
