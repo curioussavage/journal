@@ -54,12 +54,22 @@ proc initialize_config(): void =
   config = parsecfg.loadConfig(config_file_path)
 
 
-proc loadJournal() = 
+proc get_template(): string =
+  let path = config_dir / app_config_dir / "template" 
+  if not os.existsFile(path):
+    return ""
+
+  let file = readFile(path)
+  echo file
+  return file
+
+
+proc loadJournal() =
   let location = config.getSectionValue("", "journal_dir")
   if existsFile(location):
-    theDb = db_sqlite.open(location, "", "", "") 
+    theDb = db_sqlite.open(location, "", "", "")
   else:
-    theDb = db_sqlite.open(location, "", "", "") 
+    theDb = db_sqlite.open(location, "", "", "")
     theDb.exec(sql("""create table entries (
         Id      INTEGER PRIMARY KEY,
         date    INT,
@@ -253,7 +263,7 @@ else:
     entry.content = input
     theDb.updateJournal(entry)
   else:
-    var input = get_input()
+    var input = get_input(content=get_template())
     var now_date = now()
     var newEntry = Entry(date: now_date, content: input)
     theDb.saveJournal(newEntry)
