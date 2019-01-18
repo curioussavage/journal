@@ -181,7 +181,7 @@ proc list_db_entry(row: Row) =
 
 
 proc list_entries() =
-  for row in theDb.rows(sql"SELECT * from entries"):
+  for row in theDb.rows(sql"SELECT * from entries ORDER BY date ASC"):
     list_db_entry(row)
 
 
