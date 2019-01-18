@@ -47,6 +47,7 @@ proc initialize_config(): void =
     # add default values
     dict.setSectionKey("", "journal_dir", os.joinPath(home_dir, "journal.db"))
     dict.setSectionKey("", "editor", "nano")
+    dict.setSectionKey("", "file_ext", "txt")
     dict.writeConfig(config_file_path)
     config = dict
     return
@@ -142,7 +143,7 @@ proc get_todays_entry(db: DbConn): Option[Entry] =
 
 proc get_input(content = ""): string =
   let tmpPath = getTempDir() / "userEditString"
-  let tmpFile = tmpPath / $getpid()
+  let tmpFile = tmpPath / $getpid() & "." & config.getSectionValue("", "file_ext")
   try:
     createDir tmpPath
   except:
