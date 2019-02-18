@@ -5,3 +5,4 @@ Items are not sorted in any way
 * cleanup unused deps (from earlier experiments)
 * look into a better command line arg parser (docopt commandeer)
 * get version from nimble file
+* (high priority) support passing only month-day to edit date
