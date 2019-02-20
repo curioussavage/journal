@@ -6,3 +6,6 @@ Items are not sorted in any way
 * look into a better command line arg parser (docopt commandeer)
 * get version from nimble file
 * (high priority) support passing only month-day to edit date
+* add a tagging system (ie hashtags) and tag based search
+* add a tui
+* change default ls to one week (or make it configurable) and provide a "all" arg for listing all entries
