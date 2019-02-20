@@ -48,6 +48,7 @@ proc initialize_config(): void =
     dict.setSectionKey("", "journal_dir", os.joinPath(home_dir, "journal.db"))
     dict.setSectionKey("", "editor", "nano")
     dict.setSectionKey("", "file_ext", "txt")
+    dict.setSectionKey("", "default_ls_day_range", "7")
     dict.writeConfig(config_file_path)
     config = dict
     return
@@ -78,7 +79,7 @@ proc loadJournal() =
 
 
 proc writeHelp(): void =
-  echo """Journal v1.1.0
+  echo """Journal v1.2.0
 
 Description:
   journal is a command line journal program. It keeps your journal entries
@@ -101,6 +102,7 @@ Commands:
 
                 args:
                   --days   an integer specifying the number of days to list
+                  --all    tells journal to list out all entries
 
   export, exp   export journal to JSON
 
@@ -110,7 +112,7 @@ Commands:
 
 
 proc writeVersion(): void =
-  echo  "Journal v1.0.0"
+  echo  "Journal v1.2.0"
   quit()
 
 
@@ -186,7 +188,7 @@ proc list_entries() =
     list_db_entry(row)
 
 
-proc list_entries(days: int) = 
+proc list_entries(days: int) =
   var now = now()
   now = now - days(days)
   for row in theDb.rows(
@@ -260,6 +262,8 @@ if command_args.len > 0:
         args["days"] = val
       of "date":
         args["date"] = val
+      of "all":
+        args["all"] = "all"
     of cmdEnd:
       assert(false) # cannot happen
 
@@ -267,8 +271,11 @@ if command_args.len > 0:
   of "list", "ls":
     if args.hasKey "days":
       list_entries(days=args["days"].parseInt)
-    else:
+    if args.hasKey "all":
       list_entries()
+    else:
+      let days = config.getSectionValue("", "default_ls_day_range")
+      list_entries(days=days.parseInt)
   of "edit", "e": edit_entry(date=args["date"])
   of "export", "exp": export_journal()
   of "template", "t": edit_template()
