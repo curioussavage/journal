@@ -72,10 +72,19 @@ proc loadJournal() =
     theDb = db_sqlite.open(location, "", "", "")
   else:
     theDb = db_sqlite.open(location, "", "", "")
-    theDb.exec(sql("""create table entries (
+    theDb.exec(sql("""create table if not exists entries (
         Id      INTEGER PRIMARY KEY,
         date    INT,
         content TEXT )"""))
+
+    theDb.exec(sql("""create table if not exists tags (
+        id      INTEGER PRIMARY KEY,
+        content TEXT )"""))
+
+    theDb.exec(sql("""create table if not exists entry_tags (
+        id      INTEGER PRIMARY KEY,
+        tag_id    INT,
+        entry_id TEXT )"""))
 
 
 proc writeHelp(): void =
