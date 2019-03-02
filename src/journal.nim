@@ -9,6 +9,7 @@ import strutils
 import db_sqlite
 import options
 import tables
+import re
 
 import json
 
@@ -199,9 +200,20 @@ proc list_entries(days: int) =
 
 
 proc edit_entry(date: string) =
+  var complete_date: string
+  # handle short version fo date witout year
+  if match(date, re"([0-9]{2})-([0-9]{2})"):
+    let today = now()
+    var year: int
+    if date.split('-')[0].parseInt > today.month.ord:
+      let today_last_year = today - 1.years
+      year = today_last_year.year
+    else:
+      year = today.year
+    complete_date = $year & "-" & date
   var day_end: DateTime
   try:
-    var parsed_date = date.parse(time_format)
+    var parsed_date = complete_date.parse(time_format)
     var day_end = initDateTime(
       parsed_date.monthday,
       parsed_date.month,
