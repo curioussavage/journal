@@ -68,23 +68,25 @@ proc get_template(): string =
 
 proc loadJournal() =
   let location = config.getSectionValue("", "journal_dir")
-  if existsFile(location):
-    theDb = db_sqlite.open(location, "", "", "")
-  else:
-    theDb = db_sqlite.open(location, "", "", "")
-    theDb.exec(sql("""create table if not exists entries (
-        Id      INTEGER PRIMARY KEY,
-        date    INT,
-        content TEXT )"""))
+  theDb = db_sqlite.open(location, "", "", "")
+  theDb.exec(sql("""create table if not exists entries (
+      id      INTEGER PRIMARY KEY,
+      date    INT,
+      content TEXT )"""))
 
-    theDb.exec(sql("""create table if not exists tags (
-        id      INTEGER PRIMARY KEY,
-        content TEXT )"""))
+  theDb.exec(sql("""create table if not exists tags (
+      id      INTEGER PRIMARY KEY,
+      name TEXT )"""))
 
-    theDb.exec(sql("""create table if not exists entry_tags (
-        id      INTEGER PRIMARY KEY,
-        tag_id    INT,
-        entry_id TEXT )"""))
+  theDb.exec(sql("""CREATE UNIQUE INDEX IF NOT EXISTS index_name ON tags(name)"""))
+
+  theDb.exec(sql("""create table if not exists entry_tags (
+      id      INTEGER PRIMARY KEY,
+      tag_id    INTEGER,
+      entry_id TEXT,
+      FOREIGN KEY (tag_id) REFERENCES tags (id)
+      FOREIGN KEY (entry_id) REFERENCES entries (id)
+      )"""))
 
 
 proc writeHelp(): void =
@@ -139,6 +141,41 @@ proc updateJournal(db: DbConn, entry: Entry): void =
     entry.id.get
   )
 
+
+proc find_tag_by_name(db: DbConn, name: string): int =
+  var row = db.getRow(
+    sql("""SELECT * FROM tags WHERE name = ?"""),
+    name,
+  )
+  if row[0] != "":
+    return 0
+  else:
+    return row[0].parseInt
+
+
+proc updateTag(db: DbConn, tag_name: string, entry_id: int): void =
+  discard """ adds an entry_tag (will make the tag if it doesn't exist"""
+  var id: int64 = db.find_tag_by_name(tag_name)
+  if id == 0:
+    id = db.insertId(
+      sql("INSERT INTO tags (name) VALUES (?)"),
+      tag_name,
+    )
+  discard db.insertId(
+    sql("INSERT INTO entry_tags (tag_id, entry_id) VALUES (?, ?)"),
+    id, entry_id
+  )  
+
+proc find_entries_by_tag_name(db: DbConn, tag_name: string) =
+  var id = db.find_tag_by_name(tag_name)
+  if id == 0:
+    echo "tag doesn't exist"
+  else:
+    var s = sql"SELECT * FROM entries LEFT JOIN entry_tags ON entry_tags.tag_id = ?"
+    # for row in theDb.rows(sql"SELECT * from entries ORDER BY date ASC"):
+    #   list_db_entry(row
+    # for row in theDb.rows(sql"SELECT * from entries ORDER BY date ASC"):
+    #   list_db_entry(row
 
 proc get_todays_entry(db: DbConn): Option[Entry] =
   var n = now()
